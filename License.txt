@@ -1,4 +1,4 @@
-Makit project is licensed under GNU GPLv3 code and under a Creative Commons Attribution-ShareAlike 4.0 International License for the rest of the project except where otherwise noted.
+Makit project is licensed under GNU GPLv3 for Arduino code and under a Creative Commons Attribution-ShareAlike 4.0 International License for the rest of the project except where otherwise noted.
 
 MAKIT STEP CLOCK CODE FOR UNO BOARD IS LICENSED UNDER GNU GPLv3:
     MAKIT STEP CLOCK CODE FOR UNO/MEGA BOARD
