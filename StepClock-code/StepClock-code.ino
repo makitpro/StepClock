@@ -45,14 +45,11 @@ AccelStepper stepperMin1(HALFSTEP, motorMin1Pin1, motorMin1Pin3, motorMin1Pin2, 
 int currPosition;
 long positionHour;
 long positionMin;
-int hoursToReset;
-
-int resetHours=24; //Interval (hours) at which the clock will read time from RTC and recalibrate
-                   //you can change this
 
 int minuteStep =4096/60; //68 the number of steps the minute motor moves every minute
 int hourStep =4096/144; //28 the number of steps the hour motor moves every minute
 
+//Initialize sensor variables
 int hallHour1Pin=A0; //out pin of the hour hall sensor
 int hallHour1Val=0;
 int hallHour1Calib=620; //Magnet detection calibration, 
@@ -65,8 +62,11 @@ int hallMin1Calib=700; //Magnet detection calibration,
 
 // Initialize time variables
 int8_t hours;
+int8_t hours24;
 int8_t minutes;
 int8_t seconds;
+int8_t days;
+int8_t months;
 
 static unsigned long msTick =0;  // the number of Millisecond Ticks since we last 
                                  // incremented the second counter
@@ -78,8 +78,6 @@ void setup() {
     Serial.println("Couldn't find RTC");
     while (1);
   }
-
-hoursToReset=resetHours; //set interval
      
 //Uncomment one of them to set time when change batteries
    //rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));//this sets time manually
@@ -93,37 +91,25 @@ hoursToReset=resetHours; //set interval
   stepperMin1.setAcceleration(200.0);
   stepperMin1.setSpeed(500);
 
-//Calibrate 12 o'clock
-  stepperHome(stepperMin1, hallMin1Val, hallMin1Pin, hallMin1Calib);// search for magnet
-  stepperHome(stepperHour1, hallHour1Val, hallHour1Pin, hallHour1Calib);// search for magnet
-  
-  //Code calibration, change these values if necessary
-    stepperMin1.runToNewPosition(3675);//Manual calibration, change this value to achieve 0 position
-    stepperHour1.runToNewPosition(3900);//Manual calibration, change this value to achieve 0 position
-    
-  //Manual calibration, comment if you are using code calibration or hands are already in place
-    Serial.println("Insert minute and hour hand on the 12 o'clock position, you have 20 seconds");
-    delay(20000);//Time to put the hour and minute hands on the correct position, you can change it
-
+calibration();//Calibrate giving time to insert hands
 
 //get current millis  
   msTick=millis();
   
-//move motors to correct initial position
- moveMotorsToPosition();
- 
 }//end of setup--------------------------------------
 
 
 void incrementTime(void){
+    // increment the time counters keeping care to rollover as required
+  seconds=0;
+  //Show time
   Serial.print("Time: ");
-  Serial.print(hours);
+  Serial.print(hours24);
   Serial.print(":");
   Serial.print(minutes);
   Serial.print(":");
   Serial.println(seconds);
-  // increment the time counters keeping care to rollover as required
-  seconds=0;
+
     Serial.println("60 seconds, move one minute"); //debug message    
     stepperMin1.enableOutputs();
     stepperMin1.move(minuteStep);
@@ -138,11 +124,9 @@ void incrementTime(void){
       stepperMin1.move(16);// 4096/60=68.26 -> 68*60=4080 ->4096-4080=16
       stepperMin1.runToPosition();
       stepperMin1.disableOutputs();
-      hoursToReset--;
-      Serial.print("Hours to reset: ");
-      Serial.println(hoursToReset); 
       
-    if (++hours == 12) {    
+    if (++hours >= 12) {
+      hours=0;    
       //Compensate lost steps when dividing with integers
       Serial.println("12 hours, compensate hours"); //debug message   
       stepperHour1.enableOutputs(); 
@@ -150,13 +134,16 @@ void incrementTime(void){
       stepperHour1.runToPosition();
       stepperHour1.disableOutputs();
     }
+    //Recalibrate and read time from RTC each 24 hours
+    if(++hours24 ==24){
+      hours24=0;
+      //Recalibratiom
+    stepperMin1.runToNewPosition(0);
+    stepperHour1.runToNewPosition(0);
+      //move motors to correct position
+    moveMotorsToPosition();
+    }    
   }
-if (hoursToReset<=0){
-      hoursToReset=resetHours;
-      stepperHome(stepperMin1, hallMin1Val, hallMin1Pin, hallMin1Calib);// search for magnet
-      stepperHome(stepperHour1, hallHour1Val, hallHour1Pin, hallHour1Calib);// search for magnet
-      moveMotorsToPosition(); 
-}
   
 if (minutes==10||minutes==20||minutes==30||minutes==40||minutes==50||minutes==0||minutes==60||minutes==5||minutes==15||minutes==25||minutes==35||minutes==45||minutes==55){
     //Move hour motor each 5 minutes
@@ -177,7 +164,7 @@ void stepperHome(AccelStepper stepper, int hallSensorVal, int hallSensorPin, int
   while(hallSensorVal<hallSensorCalib)
   {
     //forward slowly till it detects the magnet
-    stepper.move(150);
+    stepper.move(100);
     stepper.run();
     hallSensorVal = analogRead(hallSensorPin);
   }
@@ -188,26 +175,37 @@ void stepperHome(AccelStepper stepper, int hallSensorVal, int hallSensorPin, int
 
 void moveMotorsToPosition(){
     //get updated time and move motors to correct position
-    Serial.println("Get updated time and move motors to correct position");
+  Serial.println("Get updated time and move motors to correct position");
   DateTime now = rtc.now();
     hours=now.hour();
+    hours24=hours;
     minutes=now.minute();
     seconds=now.second();
+    days=now.day();
+    months=now.month();
+
     //Adjust hours to 12h format
-      if(hours>12){
+     if(hours>12){
       hours=hours-12;  
       }
+
+ /* Serial.print("Date: ");//Debug
+  Serial.print(days);
+  Serial.print(" of ");
+  Serial.print(months);
+  Serial.print(" -- ");
   Serial.print("Time: ");
-  Serial.print(hours);
+  Serial.print(hours24);
   Serial.print(":");
   Serial.print(minutes);
   Serial.print(":");
-  Serial.println(seconds);
-  //Calculate position
+  Serial.println(seconds);*/
+
+//Calculate position
   positionHour=(hours*4096L/12);
   positionHour+=(minutes*4096L/720);//Calculate position based on the calibration
-  positionMin=(minutes*4096L/60);//Calculate position based on the calibration
-  
+  positionMin=(minutes*4096L/60);//Calculate position based on the calibrationntln(positionMin);
+    
   //Move motors to correct position 
   stepperMin1.enableOutputs();   
   stepperMin1.move(positionMin);
@@ -220,6 +218,28 @@ void moveMotorsToPosition(){
   stepperHour1.stop();
   stepperHour1.disableOutputs(); 
 }//end of moveMotorsToPosition------------------------------------------
+
+void calibration(){
+    
+  //Calibrate 12 o'clock
+    stepperHome(stepperMin1, hallMin1Val, hallMin1Pin, hallMin1Calib);// search for magnet
+    stepperHome(stepperHour1, hallHour1Val, hallHour1Pin, hallHour1Calib);// search for magnet
+  
+  //Code calibration, change these values if necessary
+    stepperMin1.runToNewPosition(3675);//Manual calibration, change this value to achieve 0 position
+    stepperHour1.runToNewPosition(3900);//Manual calibration, change this value to achieve 0 position
+    
+  //Manual calibration, comment if you are using code calibration or hands are already in place
+    Serial.println("Insert minute and hour hand on the 12 o'clock position, you have 20 seconds");
+    delay(20000);//Time to put the hour and minute hands on the correct position, you can change it
+  
+  //Set current position 0
+    stepperMin1.setCurrentPosition(0);
+    stepperHour1.setCurrentPosition(0);
+
+  //move motors to correct initial position
+    moveMotorsToPosition();
+}//end of calibration------------------------------------------
 
 void loop() {
 
