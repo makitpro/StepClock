@@ -14,6 +14,10 @@ You’ll need three libraries:
 - Accelstepper (http://www.airspayce.com/mikem/arduino/AccelStepper/)
 - wire.h that is already included with Arduino IDE
 
+VERSIONS
+There is a birthday version with a buzzer that will play a song the day you choose. Just change the value of birthdayDay, birthdayMonth and birthdayHour variables to match your birthday. Of course you'll need to add a buzzer.
+IMPORTANT: if you choose this version, the code will play the song and stop working at the set time and you'll need to reset the board with the reset button.
+
 SET TIME
 The first time you use it, uncomment on of these two lines:
 
