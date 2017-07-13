@@ -4,7 +4,7 @@ READ LICENSE FILE BEFORE USING IT
 IMPORTANT NOTE: Please, bear in mind that this code is a beta version. It works but it may have some bugs/errors.
 
 This is the code that runs my 3D printed Step Clock.
-STL files can be downloaded from here: soon
+STL files can be downloaded from here: https://pinshape.com/items/36893-3d-printed-step-clock
 
 Visit <http://www.makitpro.com> for more information and instructions about the project.
 
